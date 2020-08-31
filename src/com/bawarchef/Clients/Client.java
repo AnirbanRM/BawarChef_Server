@@ -33,7 +33,7 @@ public class Client {
         messageProcessor = new MessageProcessor() {
             @Override
             public void process(Message m) {
-                System.out.println("HANDLED BY PRIMARY");
+                System.out.println(m.msg);
             }
         };
         new Thread(()->{startListening();}).start();
