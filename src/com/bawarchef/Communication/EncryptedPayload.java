@@ -49,9 +49,9 @@ public class EncryptedPayload implements Serializable {
         }catch (NoSuchPaddingException | NoSuchAlgorithmException | InvalidKeyException | InvalidAlgorithmParameterException | IllegalBlockSizeException | BadPaddingException e){throw new Exception();}
     }
 
-    public byte[] getDecryptedPayload(byte[] key) throws WrongKeyException{
+    public Message getDecryptedPayload(byte[] key) throws WrongKeyException{
         try {
-            return decrypt(key);
+            return ObjectByteCode.getMessage(decrypt(key));
         }catch (Exception e){throw new WrongKeyException();}
     }
 

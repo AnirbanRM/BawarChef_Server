@@ -10,7 +10,7 @@ public class ObjectByteCode {
         }
     }
 
-    public static byte[] getBytes(Object obj) throws SerializableError{
+    public static byte[] getBytes(Message obj) throws SerializableError{
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(baos);
@@ -21,11 +21,11 @@ public class ObjectByteCode {
 
     }
 
-    public static Object getObject(byte[] bytes) throws SerializableError{
+    public static Message getMessage(byte[] bytes) throws SerializableError{
         try {
             ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
             ObjectInputStream ois = new ObjectInputStream(bais);
-            Object o = ois.readObject();
+            Message o = (Message) ois.readObject();
             bais.close();
             return o;
         }catch (Exception e){throw new SerializableError("Unable to deserialize.");}
