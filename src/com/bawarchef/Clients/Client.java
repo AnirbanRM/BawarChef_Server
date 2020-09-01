@@ -14,6 +14,7 @@ public class Client {
     Socket sock;
     ObjectInputStream iStream;
     ObjectOutputStream oStream;
+
     byte[] crypto_key=null;
     MessageQueue messageQueue;
     MessageProcessor messageProcessor;
@@ -33,15 +34,26 @@ public class Client {
         messageProcessor = new MessageProcessor() {
             @Override
             public void process(Message m) {
-                System.out.println(m.msg);
+                System.out.println("Handled by netish");
             }
         };
         new Thread(()->{startListening();}).start();
 
+        crypto_key = Preferences.getInstance().D_KEY_0.getBytes();
         Authenticator authenticator = new Authenticator(this);
-        authenticator.authenticate();
+        try {
+            authenticator.authenticate();
+        }catch (Exception e){}
         authenticator.setOnSuccessfulAuthentication(authenticationSuccessful);
         authenticator.setOnFailedAuthentication(authenticationUnsuccessful);
+    }
+
+    public void setMessageProcessor(MessageProcessor processor){
+        this.messageProcessor = processor;
+    }
+
+    public MessageProcessor getMessageProcessor(){
+        return messageProcessor;
     }
 
     private void startListening() {
@@ -58,6 +70,14 @@ public class Client {
                 break;
             }
         }
+    }
+
+    public byte[] getCrypto_key() {
+        return crypto_key;
+    }
+
+    public void setCrypto_key(byte[] crypto_key) {
+        this.crypto_key = crypto_key;
     }
 
     Authenticator.OnSuccessfulAuthentication authenticationSuccessful = new Authenticator.OnSuccessfulAuthentication() {
@@ -83,12 +103,23 @@ public class Client {
     MessageQueue.OnMessageArrivalListener defaultMessageListener = new MessageQueue.OnMessageArrivalListener() {
         @Override
         public void OnArrival() {
-            if(messageProcessor!=null) {
-                while(messageQueue.size()>0)
-                    messageProcessor.process(messageQueue.getLastMessage());
+            if(messageProcessor==null) {
+                try {
+                    closeConnection();
+                }catch (Exception e){}
+                return;
             }
+            while(messageQueue.size()>0)
+                messageProcessor.process(messageQueue.getLastMessage());
         }
     };
+
+    public void send(EncryptedPayload encryptedPayload){
+        try{
+            oStream.writeUnshared(encryptedPayload);
+            oStream.reset();
+        }catch (Exception e){}
+    }
 
 
 

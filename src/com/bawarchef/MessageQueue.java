@@ -15,7 +15,6 @@ public class MessageQueue extends ConcurrentLinkedQueue<Message> {
 
     public void addToQueue(Message m){
         add(m);
-        //push(m);
         if(listener!=null)
             if(size()==1)
                 new Thread(()->{listener.OnArrival();}).start();
