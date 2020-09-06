@@ -1,12 +1,17 @@
 import com.bawarchef.Communication.Listener;
+import com.bawarchef.DBConnect;
 import com.bawarchef.Preferences;
+
+import java.sql.ResultSet;
 
 public class Main {
 
     static Preferences p=null;
 
     public static void main(String[] args){
+        System.out.println("STARTING...");
         p = Preferences.getInstance();
+        DBConnect.getInstance();
 
         Listener l = new Listener(p.PORT0);
 

@@ -1,7 +1,6 @@
-package com.bawarchef;
+package com.bawarchef.Communication;
 
 import com.bawarchef.Communication.Message;
-import com.bawarchef.DataStructures.Queue;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 

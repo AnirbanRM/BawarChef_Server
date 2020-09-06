@@ -3,11 +3,12 @@ package com.bawarchef.Clients;
 import com.bawarchef.Communication.Authenticator;
 import com.bawarchef.Communication.EncryptedPayload;
 import com.bawarchef.Communication.Message;
-import com.bawarchef.MessageQueue;
+import com.bawarchef.Communication.MessageQueue;
 import com.bawarchef.Preferences;
 
 import java.io.*;
 import java.net.Socket;
+import java.security.MessageDigest;
 
 public class Client {
 
@@ -26,8 +27,8 @@ public class Client {
     public Client(Socket sock){
         this.sock = sock;
         try {
-            this.iStream = new ObjectInputStream(sock.getInputStream());
             this.oStream = new ObjectOutputStream(sock.getOutputStream());
+            this.iStream = new ObjectInputStream(sock.getInputStream());
         }catch (Exception e){e.printStackTrace();}
         messageQueue = new MessageQueue();
         messageQueue.setOnMessageArrival(defaultMessageListener);
@@ -39,13 +40,18 @@ public class Client {
         };
         new Thread(()->{startListening();}).start();
 
-        crypto_key = Preferences.getInstance().D_KEY_0.getBytes();
+        MessageDigest md5 = null;
+        try{ md5 = MessageDigest.getInstance("SHA-256"); }catch (Exception e){}
+        crypto_key = md5.digest(Preferences.getInstance().D_KEY_0.getBytes());
+
         Authenticator authenticator = new Authenticator(this);
         try {
             authenticator.authenticate();
         }catch (Exception e){}
         authenticator.setOnSuccessfulAuthentication(authenticationSuccessful);
         authenticator.setOnFailedAuthentication(authenticationUnsuccessful);
+
+
     }
 
     public void setMessageProcessor(MessageProcessor processor){
@@ -57,19 +63,17 @@ public class Client {
     }
 
     private void startListening() {
-        while(true){
+        while(!sock.isClosed()){
             try {
                 EncryptedPayload p = (EncryptedPayload) iStream.readObject();
-                Message o = p.getDecryptedPayload(Preferences.getInstance().D_KEY_0.getBytes());
+                Message o = p.getDecryptedPayload(crypto_key);
                 messageQueue.addToQueue(o);
-            } catch (IOException | ClassNotFoundException | EncryptedPayload.WrongKeyException e) {
-                e.printStackTrace();
-                try {
-                    closeConnection();
-                }catch (Exception e2){}
-                break;
+            } catch (Exception e) {
+                System.out.println("CONNECTION CLOSED !");
+                return;
             }
         }
+        System.out.println("CONNECTION CLOSED !");
     }
 
     public byte[] getCrypto_key() {
@@ -83,21 +87,21 @@ public class Client {
     Authenticator.OnSuccessfulAuthentication authenticationSuccessful = new Authenticator.OnSuccessfulAuthentication() {
         @Override
         public void onSuccess() {
-
+            System.out.print("SUccESSfully Authenticated");
         }
     };
 
     Authenticator.OnFailedAuthentication authenticationUnsuccessful = new Authenticator.OnFailedAuthentication() {
         @Override
         public void onFailure() {
-            try {
-                closeConnection();
-            }catch (Exception e){}
+            closeConnection();
         }
     };
 
-    public void closeConnection() throws Exception{
-        Client.this.sock.close();
+    public void closeConnection() {
+        try {
+            Client.this.sock.close();
+        }catch (Exception e){}
     }
 
     MessageQueue.OnMessageArrivalListener defaultMessageListener = new MessageQueue.OnMessageArrivalListener() {
@@ -118,7 +122,7 @@ public class Client {
         try{
             oStream.writeUnshared(encryptedPayload);
             oStream.reset();
-        }catch (Exception e){}
+        }catch (Exception e){e.printStackTrace();}
     }
 
 

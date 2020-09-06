@@ -3,8 +3,6 @@ package com.bawarchef.Communication;
 import java.io.Serializable;
 import java.security.MessageDigest;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
 import java.util.HashMap;
 
 public class Message implements Serializable {

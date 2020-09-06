@@ -40,6 +40,7 @@ public class Listener {
                 try {
                     Socket s = serverSocket.accept();
                     new Thread(() -> new Client(s)).start();
+                    System.out.println("NEW CONNECTION !");
                 } catch (IOException e) {
                     if(onStopListeningListener!=null)
                         onStopListeningListener.onStopListening();
