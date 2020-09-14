@@ -31,6 +31,15 @@ public class DBConnect {
     public boolean runManipulationQuery(String q){
         try {
             Statement s = connection.createStatement();
+            int a = s.executeUpdate(q);
+            if(a>=0)return true;
+            else return false;
+        }catch (Exception e){return false;}
+    }
+
+    public boolean runInsertQuery(String q){
+        try {
+            Statement s = connection.createStatement();
             return s.execute(q);
         }catch (Exception e){return false;}
     }
