@@ -50,8 +50,6 @@ public class Client {
         }catch (Exception e){}
         authenticator.setOnSuccessfulAuthentication(authenticationSuccessful);
         authenticator.setOnFailedAuthentication(authenticationUnsuccessful);
-
-
     }
 
     public void setMessageProcessor(MessageProcessor processor){
@@ -87,7 +85,8 @@ public class Client {
     Authenticator.OnSuccessfulAuthentication authenticationSuccessful = new Authenticator.OnSuccessfulAuthentication() {
         @Override
         public void onSuccess() {
-            System.out.print("SUccESSfully Authenticated");
+            System.out.println("SUccESSfully Authenticated");
+            ChefClient c = new ChefClient(Client.this);
         }
     };
 

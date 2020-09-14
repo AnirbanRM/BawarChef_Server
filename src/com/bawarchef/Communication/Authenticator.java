@@ -42,7 +42,6 @@ public class Authenticator {
         this.onSuccessfulAuthentication = onSuccessfulAuthentication;
     }
 
-
     public void setOnFailedAuthentication(OnFailedAuthentication onFailedAuthentication) {
         this.onFailedAuthentication = onFailedAuthentication;
     }
