@@ -76,7 +76,46 @@ public class Authenticator {
         }
 
         private void handleResponseByUNP(Message m) {
+            boolean success = false;
+
+            DBConnect dbConnect = DBConnect.getInstance();
+            ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_login where loginID = '"+m.getProperty("UNAME")+"' and password = '"+m.getProperty("PWD")+"';");
+
+            String regNo=null;
+            try {
+                while (rs.next()) {
+                    regNo = rs.getString("chefID");
+                }
+            }catch (Exception e){}
+
+            Message sendMsg = new Message(Message.Direction.SERVER_TO_CLIENT,"AUTH_ACK");
+            if(regNo==null) {
+                sendMsg.putProperty("RESULT", "FAILURE");
+            }
+            else{
+                rs = dbConnect.runFetchQuery("SELECT * from chef_main_table where chefID = '"+regNo+"';");
+                ArrayList<ChefIdentity> al = DBToObject.ChefMTableToChefIdentity(rs);
+
+                sendMsg.putProperty("RESULT","SUCCESS");
+                sendMsg.putProperty("CHEF_IDENTITY",al.get(0));
+                success = true;
+            }
+
+            try {
+                EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(sendMsg), client.getCrypto_key());
+                client.send(ep);
+            }catch (Exception e){e.printStackTrace();}
+
+            client.setMessageProcessor(originalMessageProcessor);
+
+            if(success){
+                onSuccessfulAuthentication.onSuccess();
+            }
+            else
+                onFailedAuthentication.onFailure();
+
         }
+
 
         private void handleResponseByID(Message m) {
             boolean success = false;

@@ -2,8 +2,6 @@ import com.bawarchef.Communication.Listener;
 import com.bawarchef.DBConnect;
 import com.bawarchef.Preferences;
 
-import java.sql.ResultSet;
-
 public class Main {
 
     static Preferences p=null;

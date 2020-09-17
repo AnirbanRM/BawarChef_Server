@@ -33,6 +33,13 @@ public class ChefClient{
             }
             else if(m.getMsg_type().equals("UPD_L_DET")){
                 boolean result = updateLDetails(m);
+                Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT,"UPD_L_DET_RESP");
+                if(result) new_m.putProperty("RESULT","SUCCESS");
+                else new_m.putProperty("RESULT","FAILURE");
+                try {
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
 
             }
             else if(m.getMsg_type().equals("")){
@@ -68,7 +75,7 @@ public class ChefClient{
                         }
                         String exec = "INSERT into chef_login value('" + cl.regNo + "','" + cl.uName + "','" + cl.pwd + "');";
                         return (con.runInsertQuery(exec));
-                    }catch (Exception e){return false;}
+                    }catch (Exception e){e.printStackTrace(); return false;}
                 }
             }
             return false;
