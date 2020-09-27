@@ -20,6 +20,25 @@ public class Client {
     MessageQueue messageQueue;
     MessageProcessor messageProcessor;
 
+    String userID=null;
+    ClientType clientType;
+
+    public String getUserID() {
+        return userID;
+    }
+
+    public void setUserID(String userID) {
+        this.userID = userID;
+    }
+
+    public ClientType getClientType() {
+        return clientType;
+    }
+
+    public void setClientType(ClientType clientType) {
+        this.clientType = clientType;
+    }
+
     public static enum ClientType{CHEF,USER};
 
     public static abstract class MessageProcessor{

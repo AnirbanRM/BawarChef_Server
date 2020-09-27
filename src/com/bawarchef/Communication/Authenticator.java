@@ -90,6 +90,8 @@ public class Authenticator {
 
         private void handleResponseByUNPChef(Message m) {
             boolean success = false;
+            client.setClientType(Client.ClientType.CHEF);
+
             DBConnect dbConnect = DBConnect.getInstance();
 
             ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_login where loginID = '"+m.getProperty("UNAME")+"' and password = '"+m.getProperty("PWD")+"';");
@@ -98,6 +100,7 @@ public class Authenticator {
             try {
                 while (rs.next()) {
                     regNo = rs.getString("chefID");
+                    client.setUserID((String) m.getProperty("UNAME"));
                 }
             }catch (Exception e){}
 
@@ -133,6 +136,8 @@ public class Authenticator {
         private void handleResponseByUNPUser(Message m) {
             boolean success = false;
 
+            client.setClientType(Client.ClientType.USER);
+
             DBConnect dbConnect = DBConnect.getInstance();
 
             ResultSet rs = dbConnect.runFetchQuery("SELECT * from user_login where loginID = '"+m.getProperty("UNAME")+"' and password = '"+m.getProperty("PWD")+"';");
@@ -140,6 +145,7 @@ public class Authenticator {
             try {
                 while (rs.next()) {
                     userID = String.valueOf(rs.getInt("userID"));
+                    client.setUserID((String) m.getProperty("UNAME"));
                 }
             }catch (Exception e){}
 
@@ -172,6 +178,8 @@ public class Authenticator {
 
         private void handleResponseByIDChef(Message m) {
             boolean success = false;
+
+            client.setClientType(Client.ClientType.CHEF);
 
             DBConnect dbConnect = DBConnect.getInstance();
             ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_main_table where chefID = '"+m.getProperty("RegNo")+"';");
@@ -206,6 +214,8 @@ public class Authenticator {
         private void handleResponseByIDUser(Message m) {
             boolean success = false;
 
+            client.setClientType(Client.ClientType.USER);
+
             DBConnect dbConnect = DBConnect.getInstance();
             ArrayList<String> keys = dbConnect.runInsertQueryAndgetKey("INSERT INTO user_main_table(f_name,l_name,mobNo,email) value('"+m.getProperty("FNAME")+"','"+m.getProperty("LNAME")+"','"+m.getProperty("MOB")+"','"+m.getProperty("EMAIL")+"');");
 
@@ -219,6 +229,7 @@ public class Authenticator {
                 sendMsg.putProperty("RESULT","SUCCESS");
                 for(String s : keys){
                     dbConnect.runInsertQuery("INSERT INTO user_login value('"+s+"','"+m.getProperty("UNAME")+"','"+m.getProperty("PWD")+"');");
+                    client.setUserID((String) m.getProperty("UNAME"));
                 }
                 success = true;
             }

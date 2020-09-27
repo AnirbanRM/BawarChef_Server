@@ -6,11 +6,13 @@ import com.bawarchef.Communication.ObjectByteCode;
 import com.bawarchef.Containers.ChefIdentity;
 import com.bawarchef.Containers.ChefLogin;
 import com.bawarchef.Containers.GeoLocationCircle;
+import com.bawarchef.Containers.ProfileContainer;
 import com.bawarchef.DBConnect;
 
 import java.net.Socket;
 import java.sql.ResultSet;
 import java.util.ArrayList;
+import java.util.Base64;
 
 public class ChefClient{
 
@@ -71,7 +73,38 @@ public class ChefClient{
                 }catch (Exception e){}
 
             }
-            else if(m.getMsg_type().equals("")){
+            else if(m.getMsg_type().equals("UPD_PROFILE_CHEF")){
+                boolean success = false;
+
+                Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT,"UPD_PROFILE_RESP");
+                ProfileContainer profileContainer = (ProfileContainer) m.getProperty("DATA");
+                String base64DP = "";
+                if(profileContainer.dp!=null)
+                    base64DP = Base64.getEncoder().encodeToString(profileContainer.dp);
+                DBConnect dbConnect = DBConnect.getInstance();
+
+                ResultSet rs = dbConnect.runFetchQuery("select chefID from chef_login where loginID = '"+parentClient.getUserID()+"';");
+                try{
+                    rs.next();
+                    dbConnect.runManipulationQuery("UPDATE chef_login set loginID = '"+profileContainer.uName+"' where chefID = '"+rs.getString("chefID")+"';");
+                    ResultSet rs2 = dbConnect.runFetchQuery("select chefID from chef_profile_table where chefID = '"+rs.getString("chefID")+"';");
+                    while(rs2.next()) {
+                        success = dbConnect.runManipulationQuery("UPDATE chef_profile_table set bio='" + profileContainer.bio + "',lat=" + profileContainer.resiLat + ",lng=" + profileContainer.resiLng + ",dp='" + base64DP + "' where chefID = '" + rs.getString("chefID") + "';");
+                    }
+
+                    if(!success){
+                        success = dbConnect.runInsertQuery("INSERT INTO chef_profile_table value('"+rs.getString("chefID")+"','"+base64DP+"',"+profileContainer.resiLat+","+profileContainer.resiLng+",'"+profileContainer.bio+"');");
+                    }
+
+                }catch (Exception e){}
+
+                if(success)new_m.putProperty("RESULT","SUCCESS");
+                else new_m.putProperty("RESULT","FAILURE");
+
+                try {
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
 
             }
             else if(m.getMsg_type().equals("")){
@@ -97,9 +130,11 @@ public class ChefClient{
                     try {
                         while (rs.next()) {
                             String exec = "UPDATE chef_login set loginID = '" + cl.uName + "', password = '" + cl.pwd + "' where chefID = '" + cl.regNo + "';";
+                            parentClient.setUserID(cl.uName);
                             return (con.runManipulationQuery(exec));
                         }
                         String exec = "INSERT into chef_login value('" + cl.regNo + "','" + cl.uName + "','" + cl.pwd + "');";
+                        parentClient.setUserID(cl.uName);
                         return (con.runInsertQuery(exec));
                     }catch (Exception e){e.printStackTrace(); return false;}
                 }
