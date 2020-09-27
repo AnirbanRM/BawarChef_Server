@@ -107,7 +107,26 @@ public class ChefClient{
                 }catch (Exception e){}
 
             }
-            else if(m.getMsg_type().equals("")){
+            else if(m.getMsg_type().equals("PROFILE_FETCH")){
+                Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT,"PROFILE_FETCH_RESP");
+                ProfileContainer profileContainer = new ProfileContainer();
+                DBConnect dbConnect = DBConnect.getInstance();
+                ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_profile_table,chef_login where loginID = '"+parentClient.getUserID()+"' and chef_profile_table.chefID = chef_login.chefID;");
+
+                try {
+                    while (rs.next()) {
+                        profileContainer.resiLat = (float)rs.getDouble("lat");
+                        profileContainer.resiLng = (float)rs.getDouble("lng");
+                        profileContainer.bio = rs.getString("bio");
+                        profileContainer.dp = Base64.getDecoder().decode(rs.getString("dp"));
+                    }
+                }catch (Exception e){}
+
+                new_m.putProperty("DATA",profileContainer);
+                try {
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
 
             }
             else if(m.getMsg_type().equals("")){
