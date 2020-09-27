@@ -2,6 +2,7 @@ package com.bawarchef.Communication;
 
 import com.bawarchef.Containers.ChefIdentity;
 import com.bawarchef.Clients.Client;
+import com.bawarchef.Containers.UserIdentity;
 import com.bawarchef.DBConnect;
 import com.bawarchef.DBToObject;
 
@@ -11,11 +12,11 @@ import java.util.ArrayList;
 public class Authenticator {
 
     public static abstract class OnSuccessfulAuthentication{
-        public abstract void onSuccess();
+        public abstract void onSuccess(Client.ClientType clientType);
     }
 
     public static abstract class OnFailedAuthentication{
-        public abstract void onFailure();
+        public abstract void onFailure(Client.ClientType clientType);
     }
 
     OnSuccessfulAuthentication onSuccessfulAuthentication=null;
@@ -55,16 +56,28 @@ public class Authenticator {
 
                 client.setCrypto_key(arrayxor(client.getCrypto_key(),(byte[])m.getProperty("IDENTITY")));
 
-                if(m.getProperty("TYPE").equals("UNREGISTERED"))
-                    handleResponseByID(m);
+                if(m.getProperty("TYPE").equals("UNREGISTERED")) {
+                    if (m.getProperty("CLIENT_TYPE").equals("CHEF"))
+                        handleResponseByIDChef(m);
+                    else if (m.getProperty("CLIENT_TYPE").equals("USER"))
+                        handleResponseByIDUser(m);
+                }
 
-                else if(m.getProperty("TYPE").equals("REGISTERED"))
-                    handleResponseByUNP(m);
+                else if(m.getProperty("TYPE").equals("REGISTERED")) {
+
+                    if (m.getProperty("CLIENT_TYPE").equals("CHEF"))
+                        handleResponseByUNPChef(m);
+                    else if (m.getProperty("CLIENT_TYPE").equals("USER"))
+                        handleResponseByUNPUser(m);
+                }
 
             }
             else {
                 client.setMessageProcessor(originalMessageProcessor);
-                onFailedAuthentication.onFailure();
+                if(m.getProperty("CLIENT_TYPE").equals("CHEF"))
+                    onFailedAuthentication.onFailure(Client.ClientType.CHEF);
+                else if(m.getProperty("CLIENT_TYPE").equals("USER"))
+                    onFailedAuthentication.onFailure(Client.ClientType.USER);
             }
         }
 
@@ -75,10 +88,10 @@ public class Authenticator {
             return t;
         }
 
-        private void handleResponseByUNP(Message m) {
+        private void handleResponseByUNPChef(Message m) {
             boolean success = false;
-
             DBConnect dbConnect = DBConnect.getInstance();
+
             ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_login where loginID = '"+m.getProperty("UNAME")+"' and password = '"+m.getProperty("PWD")+"';");
 
             String regNo=null;
@@ -104,20 +117,60 @@ public class Authenticator {
             try {
                 EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(sendMsg), client.getCrypto_key());
                 client.send(ep);
+
             }catch (Exception e){e.printStackTrace();}
 
             client.setMessageProcessor(originalMessageProcessor);
 
             if(success){
-                onSuccessfulAuthentication.onSuccess();
+                onSuccessfulAuthentication.onSuccess(Client.ClientType.CHEF);
             }
             else
-                onFailedAuthentication.onFailure();
+                onFailedAuthentication.onFailure(Client.ClientType.CHEF);
 
         }
 
+        private void handleResponseByUNPUser(Message m) {
+            boolean success = false;
 
-        private void handleResponseByID(Message m) {
+            DBConnect dbConnect = DBConnect.getInstance();
+
+            ResultSet rs = dbConnect.runFetchQuery("SELECT * from user_login where loginID = '"+m.getProperty("UNAME")+"' and password = '"+m.getProperty("PWD")+"';");
+            String userID=null;
+            try {
+                while (rs.next()) {
+                    userID = String.valueOf(rs.getInt("userID"));
+                }
+            }catch (Exception e){}
+
+            Message sendMsg = new Message(Message.Direction.SERVER_TO_CLIENT,"AUTH_ACK");
+            if(userID==null) {
+                sendMsg.putProperty("RESULT", "FAILURE");
+            }
+            else{
+                rs = dbConnect.runFetchQuery("SELECT * from user_main_table where userID = '"+userID+"';");
+                ArrayList<UserIdentity> al = DBToObject.UserMTableToUserIdentity(rs);
+
+                sendMsg.putProperty("RESULT","SUCCESS");
+                sendMsg.putProperty("USER_IDENTITY",al.get(0));
+                success = true;
+            }
+
+            try {
+                EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(sendMsg), client.getCrypto_key());
+                client.send(ep);
+            }catch (Exception e){e.printStackTrace();}
+
+            client.setMessageProcessor(originalMessageProcessor);
+
+            if(success){
+                onSuccessfulAuthentication.onSuccess(Client.ClientType.USER);
+            }
+            else
+                onFailedAuthentication.onFailure(Client.ClientType.USER);
+        }
+
+        private void handleResponseByIDChef(Message m) {
             boolean success = false;
 
             DBConnect dbConnect = DBConnect.getInstance();
@@ -143,10 +196,44 @@ public class Authenticator {
             client.setMessageProcessor(originalMessageProcessor);
 
             if(success){
-                onSuccessfulAuthentication.onSuccess();
+                onSuccessfulAuthentication.onSuccess(Client.ClientType.CHEF);
             }
             else
-                onFailedAuthentication.onFailure();
+                onFailedAuthentication.onFailure(Client.ClientType.CHEF);
+
+        }
+
+        private void handleResponseByIDUser(Message m) {
+            boolean success = false;
+
+            DBConnect dbConnect = DBConnect.getInstance();
+            ArrayList<String> keys = dbConnect.runInsertQueryAndgetKey("INSERT INTO user_main_table(f_name,l_name,mobNo,email) value('"+m.getProperty("FNAME")+"','"+m.getProperty("LNAME")+"','"+m.getProperty("MOB")+"','"+m.getProperty("EMAIL")+"');");
+
+            Message sendMsg = new Message(Message.Direction.SERVER_TO_CLIENT,"AUTH_ACK");
+
+            if(keys.size()==0) {
+                sendMsg.putProperty("RESULT", "FAILURE");
+            }
+
+            else if(keys.size()==1){
+                sendMsg.putProperty("RESULT","SUCCESS");
+                for(String s : keys){
+                    dbConnect.runInsertQuery("INSERT INTO user_login value('"+s+"','"+m.getProperty("UNAME")+"','"+m.getProperty("PWD")+"');");
+                }
+                success = true;
+            }
+            try {
+                EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(sendMsg), client.getCrypto_key());
+                client.send(ep);
+            }catch (Exception e){e.printStackTrace();}
+
+            client.setMessageProcessor(originalMessageProcessor);
+
+            if(success){
+                onSuccessfulAuthentication.onSuccess(Client.ClientType.USER);
+            }
+            else
+                onFailedAuthentication.onFailure(Client.ClientType.USER);
 
         }
     };

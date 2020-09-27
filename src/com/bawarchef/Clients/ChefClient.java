@@ -5,10 +5,12 @@ import com.bawarchef.Communication.Message;
 import com.bawarchef.Communication.ObjectByteCode;
 import com.bawarchef.Containers.ChefIdentity;
 import com.bawarchef.Containers.ChefLogin;
+import com.bawarchef.Containers.GeoLocationCircle;
 import com.bawarchef.DBConnect;
 
 import java.net.Socket;
 import java.sql.ResultSet;
+import java.util.ArrayList;
 
 public class ChefClient{
 
@@ -42,7 +44,31 @@ public class ChefClient{
                 }catch (Exception e){}
 
             }
-            else if(m.getMsg_type().equals("")){
+            else if(m.getMsg_type().equals("GEOLOC_QUERY")) {
+                double lat = (double) m.getProperty("LAT");
+                double lng = (double) m.getProperty("LNG");
+
+                double latmin = lat - 0.1, latmax = lat + 0.1;
+                double lngmin = lng - 0.1, lngmax = lng + 0.1;
+
+                String query = "SELECT * from circles where lat between " + latmin + " and " + latmax + " and lng between " + lngmin + " and " + lngmax + ";";
+                DBConnect dbConnect = DBConnect.getInstance();
+                ResultSet rs = dbConnect.runFetchQuery(query);
+                ArrayList<GeoLocationCircle> geoLocationCircles = new ArrayList<GeoLocationCircle>();
+                try {
+                    while (rs.next()){
+                        GeoLocationCircle r = new GeoLocationCircle(rs.getInt("circleID"),rs.getString("circleName"),rs.getDouble("lat"),rs.getDouble("lng"));
+                        geoLocationCircles.add(r);
+                    }
+                } catch (Exception e) { }
+
+                Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT,"GEOLOC_RESP");
+                new_m.putProperty("NEARBY_P",geoLocationCircles);
+
+                try {
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
 
             }
             else if(m.getMsg_type().equals("")){

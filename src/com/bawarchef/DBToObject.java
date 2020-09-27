@@ -1,6 +1,7 @@
 package com.bawarchef;
 
 import com.bawarchef.Containers.ChefIdentity;
+import com.bawarchef.Containers.UserIdentity;
 
 import java.sql.ResultSet;
 import java.time.format.DateTimeFormatter;
@@ -38,6 +39,32 @@ public class DBToObject {
                 ci.aadhar = rs.getString("aadhar_no");
 
                 arrayList.add(ci);
+
+            }
+        }catch (Exception e){ }
+        return arrayList;
+    }
+
+    public static ArrayList<UserIdentity> UserMTableToUserIdentity(ResultSet rs){
+        ArrayList<UserIdentity> arrayList =  new ArrayList<UserIdentity>();
+        try {
+            while (rs.next()) {
+
+                UserIdentity ui = new UserIdentity();
+
+                ui.userID = rs.getString("userID");
+                ui.fname = rs.getString("f_name");
+                ui.lname = rs.getString("l_name");
+
+                ui.addr.address = rs.getString("addr");
+                ui.addr.city = rs.getString("city");
+                ui.addr.state = rs.getString("state");
+                ui.addr.pinNo = rs.getString("pin");
+
+                ui.mob = rs.getString("mobNo");
+                ui.email = rs.getString("email");
+
+                arrayList.add(ui);
 
             }
         }catch (Exception e){ }

@@ -4,6 +4,7 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
+import java.util.ArrayList;
 
 public class DBConnect {
     private static DBConnect dBConnect = new DBConnect();
@@ -42,6 +43,19 @@ public class DBConnect {
             Statement s = connection.createStatement();
             return s.execute(q);
         }catch (Exception e){return false;}
+    }
+
+    public ArrayList<String> runInsertQueryAndgetKey(String q){
+        try {
+            ArrayList<String> keys = new ArrayList<>();
+            Statement s = connection.createStatement();
+            s.execute(q,Statement.RETURN_GENERATED_KEYS);
+            ResultSet rs = s.getGeneratedKeys();
+            while(rs.next()){
+                keys.add(rs.getString(1));
+            }
+            return keys;
+        }catch (Exception e){ e.printStackTrace(); return null;}
     }
 
 

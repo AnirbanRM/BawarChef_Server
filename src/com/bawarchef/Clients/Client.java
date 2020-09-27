@@ -20,6 +20,8 @@ public class Client {
     MessageQueue messageQueue;
     MessageProcessor messageProcessor;
 
+    public static enum ClientType{CHEF,USER};
+
     public static abstract class MessageProcessor{
         public abstract void process(Message m);
     }
@@ -84,15 +86,20 @@ public class Client {
 
     Authenticator.OnSuccessfulAuthentication authenticationSuccessful = new Authenticator.OnSuccessfulAuthentication() {
         @Override
-        public void onSuccess() {
-            System.out.println("SUccESSfully Authenticated");
-            ChefClient c = new ChefClient(Client.this);
+        public void onSuccess(ClientType clientType) {
+            if(clientType==ClientType.CHEF) {
+                System.out.println("SUccESSfully Authenticated");
+                ChefClient c = new ChefClient(Client.this);
+            }else if(clientType==ClientType.USER) {
+                closeConnection();
+            }
+
         }
     };
 
     Authenticator.OnFailedAuthentication authenticationUnsuccessful = new Authenticator.OnFailedAuthentication() {
         @Override
-        public void onFailure() {
+        public void onFailure(ClientType clientType) {
             closeConnection();
         }
     };
