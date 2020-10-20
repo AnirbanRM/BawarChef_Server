@@ -242,6 +242,7 @@ public class Authenticator {
 
             if(success){
                 onSuccessfulAuthentication.onSuccess(Client.ClientType.USER);
+                client.closeConnection();
             }
             else
                 onFailedAuthentication.onFailure(Client.ClientType.USER);

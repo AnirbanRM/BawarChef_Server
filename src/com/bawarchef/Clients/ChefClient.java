@@ -8,8 +8,12 @@ import com.bawarchef.Containers.ChefLogin;
 import com.bawarchef.Containers.GeoLocationCircle;
 import com.bawarchef.Containers.ProfileContainer;
 import com.bawarchef.DBConnect;
+import com.bawarchef.android.Hierarchy.DataStructure.Tree;
 
-import java.net.Socket;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -64,8 +68,24 @@ public class ChefClient{
                     }
                 } catch (Exception e) { }
 
+                String chefID = null;
+                rs = dbConnect.runFetchQuery("select chefID from chef_login where loginID = '"+parentClient.getUserID()+"';");
+                try {
+                    rs.next();
+                    chefID = rs.getString("chefID");
+                }catch (Exception e){}
+
+                String regCircleID=null;
+                rs = dbConnect.runFetchQuery("SELECT circleID from chef_circle where chefID = '"+chefID+"';");
+                try {
+                    while(rs.next())
+                        regCircleID = rs.getString("circleID");
+                }catch (Exception e){}
+
+
                 Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT,"GEOLOC_RESP");
                 new_m.putProperty("NEARBY_P",geoLocationCircles);
+                new_m.putProperty("REG_CIRCLE",regCircleID);
 
                 try {
                     EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
@@ -129,9 +149,143 @@ public class ChefClient{
                 }catch (Exception e){}
 
             }
+            else if(m.getMsg_type().equals("UPD_CHEF_MENU")){
+                boolean success=false;
+
+                Tree menu = (Tree)m.getProperty("MENU_DATA");
+                String objstr=null;
+                try {
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    ObjectOutputStream oos = new ObjectOutputStream(baos);
+                    oos.writeObject(menu);
+                    oos.flush();
+                    objstr = Base64.getEncoder().encodeToString(baos.toByteArray());
+                }catch (Exception e){}
+
+                DBConnect dbConnect = DBConnect.getInstance();
+
+                ResultSet rs = dbConnect.runFetchQuery("select chefID from chef_login where loginID = '"+parentClient.getUserID()+"';");
+                String chefID= null;
+                try {
+                    rs.next();
+                    chefID = rs.getString("chefID");
+                }catch(Exception e){}
+
+                rs  = dbConnect.runFetchQuery("SELECT * from chef_menu where chefID = '"+chefID+"';");
+                try {
+                    while (rs.next()) {
+                        success = dbConnect.runManipulationQuery("UPDATE chef_menu set menuSerial = '"+objstr+"' where chefID = '"+chefID+"';");
+                    }
+
+                    if(!success)
+                        success = dbConnect.runInsertQuery("INSERT into chef_menu value('"+chefID+"','"+objstr+"');");
+
+                }catch (Exception e){}
+
+                Message newm = new Message(Message.Direction.SERVER_TO_CLIENT,"UPD_MENU_RESP");
+                if(success)newm.putProperty("RESULT","SUCCESS");
+                else newm.putProperty("RESULT","FAILURE");
+
+                try {
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(newm), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
+            }
+
+
+            else if(m.getMsg_type().equals("FETCH_CHEF_MENU")){
+                DBConnect dbConnect = DBConnect.getInstance();
+
+                ResultSet rs = dbConnect.runFetchQuery("select chefID from chef_login where loginID = '"+parentClient.getUserID()+"';");
+                String chefID= null;
+                try {
+                    rs.next();
+                    chefID = rs.getString("chefID");
+                }catch(Exception e){}
+
+                rs = dbConnect.runFetchQuery("SELECT * from chef_menu where chefID = '"+chefID+"';");
+
+                Tree t =null;
+
+                try {
+                    while (rs.next()) {
+                        byte[] bytarr = Base64.getDecoder().decode(rs.getString("menuSerial"));
+                        ByteArrayInputStream bais = new ByteArrayInputStream(bytarr);
+                        ObjectInputStream ois = new ObjectInputStream(bais);
+                        t = (Tree) ois.readObject();
+                    }
+                }catch (Exception e){e.printStackTrace();}
+
+                Message newm = new Message(Message.Direction.SERVER_TO_CLIENT,"RESP_CHEF_MENU");
+                newm.putProperty("MENU_TREE",t);
+
+                try {
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(newm), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
+            }
+
+            else if(m.getMsg_type().equals("CIRCLE_REGISTRATION")){
+                boolean success = false;
+
+                DBConnect dbConnect = DBConnect.getInstance();
+                String chefID = null;
+                ResultSet rs = dbConnect.runFetchQuery("select chefID from chef_login where loginID = '"+parentClient.getUserID()+"';");
+                try {
+                    rs.next();
+                    chefID = rs.getString("chefID");
+                }catch(Exception e){}
+
+                rs  = dbConnect.runFetchQuery("SELECT * from chef_circle where chefID = '"+chefID+"';");
+                try {
+                    while (rs.next())
+                        success = dbConnect.runManipulationQuery("UPDATE chef_circle set circleID = "+m.getProperty("CIRCLE_ID")+" where chefID = '"+chefID+"';");
+
+                    if(!success)
+                        success = dbConnect.runInsertQuery("INSERT into chef_circle value("+m.getProperty("CIRCLE_ID")+",'"+chefID+"');");
+
+                }catch (Exception e){}
+
+                Message newm = new Message(Message.Direction.SERVER_TO_CLIENT,"GEOLOC_REG_RESP");
+                if(success){
+                    newm.putProperty("RESULT","OK");
+                    newm.putProperty("CIRCLE_ID",m.getProperty("CIRCLE_ID"));
+
+                    try {
+                        rs = dbConnect.runFetchQuery("SELECT circleName from circles where circleID = '" + m.getProperty("CIRCLE_ID") + "';");
+                        rs.next();
+                        newm.putProperty("CIRCLE_NAME",rs.getString("circleName"));
+                    }catch (Exception e){}
+
+                }
+                else newm.putProperty("RESULT","N_OK");
+                try {
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(newm), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
+
+            }
+
             else if(m.getMsg_type().equals("")){
 
             }
+
+            else if(m.getMsg_type().equals("")){
+
+            }
+
+            else if(m.getMsg_type().equals("")){
+
+            }
+
+            else if(m.getMsg_type().equals("")){
+
+            }
+
+            else if(m.getMsg_type().equals("")){
+
+            }
+
             else if(m.getMsg_type().equals("")){
 
             }

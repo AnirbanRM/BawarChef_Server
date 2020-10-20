@@ -88,7 +88,7 @@ public class Client {
                 Message o = p.getDecryptedPayload(crypto_key);
                 messageQueue.addToQueue(o);
             } catch (Exception e) {
-                System.out.println("CONNECTION CLOSED !");
+                System.out.println("CONNECTION CLOSED !"+e.toString());
                 return;
             }
         }
@@ -110,7 +110,7 @@ public class Client {
                 System.out.println("SUccESSfully Authenticated");
                 ChefClient c = new ChefClient(Client.this);
             }else if(clientType==ClientType.USER) {
-                closeConnection();
+                UserClient u = new UserClient(Client.this);
             }
 
         }
