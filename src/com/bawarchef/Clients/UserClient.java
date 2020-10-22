@@ -3,6 +3,7 @@ package com.bawarchef.Clients;
 import com.bawarchef.Communication.EncryptedPayload;
 import com.bawarchef.Communication.Message;
 import com.bawarchef.Communication.ObjectByteCode;
+import com.bawarchef.Containers.ChefAdvertMajorContainer;
 import com.bawarchef.Containers.ChefAdvertMinorContainer;
 import com.bawarchef.Containers.GeoLocationCircle;
 import com.bawarchef.DBConnect;
@@ -87,7 +88,32 @@ public class UserClient{
                     parentClient.send(ep);
                 } catch (Exception e) {
                 }
+            }
 
+
+            else if(m.getMsg_type().equals("FETCH_CHEF_IND")){
+                String chefID = (String)m.getProperty("chefID");
+
+                DBConnect dbConnect = DBConnect.getInstance();
+
+                ResultSet rs = dbConnect.runFetchQuery("select chef_main_table.chefID,\n" +
+                        "chef_main_table.f_name,\n" +
+                        "chef_main_table.l_name,\n" +
+                        "chef_profile_table.dp,\n" +
+                        "chef_profile_table.bio\n" +
+                        "from chef_main_table \n" +
+                        "left join chef_profile_table using (chefID) where chef_main_table.chefID = '"+chefID+"';");
+
+                try {
+                    rs.next();
+                    ChefAdvertMajorContainer c = new ChefAdvertMajorContainer(chefID,rs.getString("f_name"),rs.getString("l_name"),4.5f, rs.getString("bio"));
+                    c.setDp(rs.getString("dp"));
+
+                    Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT, "RESP_IND_CHEF");
+                    new_m.putProperty("CHEF", c);
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
             }
         }
 
