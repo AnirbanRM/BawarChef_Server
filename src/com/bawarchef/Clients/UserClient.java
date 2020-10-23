@@ -7,7 +7,9 @@ import com.bawarchef.Containers.ChefAdvertMajorContainer;
 import com.bawarchef.Containers.ChefAdvertMinorContainer;
 import com.bawarchef.Containers.GeoLocationCircle;
 import com.bawarchef.DBConnect;
+import com.bawarchef.android.Hierarchy.DataStructure.Tree;
 
+import java.io.*;
 import java.sql.ResultSet;
 import java.util.ArrayList;
 import java.util.Base64;
@@ -90,7 +92,6 @@ public class UserClient{
                 }
             }
 
-
             else if(m.getMsg_type().equals("FETCH_CHEF_IND")){
                 String chefID = (String)m.getProperty("chefID");
 
@@ -111,6 +112,28 @@ public class UserClient{
 
                     Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT, "RESP_IND_CHEF");
                     new_m.putProperty("CHEF", c);
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
+            }
+
+            else if(m.getMsg_type().equals("FETCH_CHEF_MENU")){
+                String chefID = (String)m.getProperty("chefID");
+
+                DBConnect dbConnect = DBConnect.getInstance();
+                ResultSet rs = dbConnect.runFetchQuery("select menuSerial from chef_menu where chefID = '"+chefID+"';");
+
+                Tree t = null;
+
+                try {
+                    rs.next();
+                    byte [] bytarr = Base64.getDecoder().decode(rs.getString("menuSerial"));
+                    ByteArrayInputStream bais = new ByteArrayInputStream(bytarr);
+                    ObjectInputStream ois = new ObjectInputStream(bais);
+                    t = (Tree) ois.readObject();
+
+                    Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT, "RESP_CHEF_MENU");
+                    new_m.putProperty("CHEF_MENU", t);
                     EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
                     parentClient.send(ep);
                 }catch (Exception e){}
