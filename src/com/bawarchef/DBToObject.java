@@ -1,11 +1,16 @@
 package com.bawarchef;
 
-import com.bawarchef.Containers.ChefIdentity;
-import com.bawarchef.Containers.UserIdentity;
+import com.bawarchef.Containers.*;
+import com.bawarchef.android.Hierarchy.DataStructure.CartItem;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
 import java.sql.ResultSet;
+import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
+import java.util.Base64;
 
 public class DBToObject {
 
@@ -64,10 +69,87 @@ public class DBToObject {
                 ui.mob = rs.getString("mobNo");
                 ui.email = rs.getString("email");
 
+                if(rs.getDate("dob")!=null) {
+                    LocalDate date = rs.getDate("dob").toLocalDate();
+                    ui.dob = date.getDayOfMonth() + "/" + date.getMonthValue() + "/" + date.getYear();
+                }
+
+                String dpStr = rs.getString("dp");
+                if(dpStr!=null&&dpStr.length()!=0) {
+                    ui.dp = Base64.getDecoder().decode(dpStr);
+                }
+                ui.gender = rs.getString("gender");
+                ui.lati = rs.getDouble("lat");
+                ui.longi = rs.getDouble("lng");;
+                ui.userID = rs.getString("userID");
+
                 arrayList.add(ui);
 
             }
-        }catch (Exception e){ }
+        }catch (Exception e){
+            e.printStackTrace();
+        }
         return arrayList;
     }
+
+    public static ArrayList<OrderListItemClass> rsToOrdersMIni(ResultSet rs){
+        ArrayList<OrderListItemClass> orders = new ArrayList<OrderListItemClass>();
+
+        try {
+            while (rs.next()) {
+                String ordID = String.valueOf(rs.getInt("orderID"));
+                String name = rs.getString("f_name")+" "+rs.getString("l_name");
+                byte[] dp= null;
+                String dpStr = rs.getString("dp");
+                if(dpStr!=null&&dpStr.length()!=0) {
+                    dp = Base64.getDecoder().decode(dpStr);
+                }
+
+                String bookingDateTime = rs.getDate("bookingDateTime").toString()+" "+rs.getTime("bookingDateTime");
+                String status = rs.getString("status");
+                double price = rs.getDouble("price");
+
+                OrderListItemClass orderListItemClass = new OrderListItemClass(ordID,name,dp,price,status, bookingDateTime);
+                orders.add(orderListItemClass);
+            }
+        }catch (Exception e){}
+
+        return orders;
+    }
+
+    public static OrderSummaryItem rsToOrders(ResultSet rs){
+        ArrayList<OrderSummaryItem> orders = new ArrayList<OrderSummaryItem>();
+
+        try {
+            while (rs.next()) {
+                String ordID = String.valueOf(rs.getInt("orderID"));
+                String chefID = rs.getString("chefID");
+
+                String name = rs.getString("f_name")+" "+rs.getString("l_name");
+                byte[] dp= null;
+                String dpStr = rs.getString("dp");
+                if(dpStr!=null&&dpStr.length()!=0) {
+                    dp = Base64.getDecoder().decode(dpStr);
+                }
+                double lat = rs.getDouble("lat");
+                double lng = rs.getDouble("lng");
+
+                String bookingDateTime = rs.getDate("bookingDateTime").toString()+" "+rs.getTime("bookingDateTime");
+                String status = rs.getString("status");
+                double price = rs.getDouble("price");
+                String address = rs.getString("address");
+
+                byte b[] = Base64.getDecoder().decode(rs.getString("cart"));
+                ByteArrayInputStream bais = new ByteArrayInputStream(b);
+                ObjectInputStream oid = new ObjectInputStream(bais);
+                ArrayList<CartItem> items = (ArrayList<CartItem>) oid.readObject();
+
+                OrderSummaryItem osi = new OrderSummaryItem(ordID,chefID,name,bookingDateTime,address,status,dp,price,items,lat,lng);
+                return osi;
+
+            }
+        }catch (Exception e){e.printStackTrace();}
+        return null;
+    }
+
 }

@@ -100,7 +100,7 @@ public class Authenticator {
             try {
                 while (rs.next()) {
                     regNo = rs.getString("chefID");
-                    client.setUserID((String) m.getProperty("UNAME"));
+                    client.setUserID(regNo);
                 }
             }catch (Exception e){}
 
@@ -145,7 +145,7 @@ public class Authenticator {
             try {
                 while (rs.next()) {
                     userID = String.valueOf(rs.getInt("userID"));
-                    client.setUserID((String) m.getProperty("UNAME"));
+                    client.setUserID(userID);
                 }
             }catch (Exception e){}
 
@@ -154,7 +154,7 @@ public class Authenticator {
                 sendMsg.putProperty("RESULT", "FAILURE");
             }
             else{
-                rs = dbConnect.runFetchQuery("SELECT * from user_main_table where userID = '"+userID+"';");
+                rs = dbConnect.runFetchQuery("select * from user_main_table left join user_profile_table using (userID) left join user_login using (userID) where userID = '"+userID+"';");
                 ArrayList<UserIdentity> al = DBToObject.UserMTableToUserIdentity(rs);
 
                 sendMsg.putProperty("RESULT","SUCCESS");
