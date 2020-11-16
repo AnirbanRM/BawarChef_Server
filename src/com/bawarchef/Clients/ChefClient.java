@@ -48,7 +48,7 @@ public class ChefClient{
                     while (rs.next()) {
                         completed = rs.getLong("completed");
                         pending = rs.getLong("pending");
-                        rating = rs.getShort("rating");
+                        rating = rs.getDouble("rating");
                         score = rs.getDouble("score");
                     }
                 }catch (Exception e){}
