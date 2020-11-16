@@ -52,6 +52,7 @@ public class Authenticator {
         @Override
         public void process(Message m) {
 
+
             if(m.getMsg_type().equals("AUTH->RESPONSE")){
 
                 client.setCrypto_key(arrayxor(client.getCrypto_key(),(byte[])m.getProperty("IDENTITY")));
@@ -109,7 +110,7 @@ public class Authenticator {
                 sendMsg.putProperty("RESULT", "FAILURE");
             }
             else{
-                rs = dbConnect.runFetchQuery("SELECT * from chef_main_table where chefID = '"+regNo+"';");
+                rs = dbConnect.runFetchQuery("SELECT * from chef_main_table left join chef_profile_table using (chefID) where chefID = '"+regNo+"';");
                 ArrayList<ChefIdentity> al = DBToObject.ChefMTableToChefIdentity(rs);
 
                 sendMsg.putProperty("RESULT","SUCCESS");

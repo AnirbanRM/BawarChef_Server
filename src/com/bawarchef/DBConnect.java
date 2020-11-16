@@ -29,6 +29,10 @@ public class DBConnect {
         }catch (Exception e){return null;}
     }
 
+    public Connection getConnection(){
+        return connection;
+    }
+
     public boolean runManipulationQuery(String q){
         try {
             Statement s = connection.createStatement();

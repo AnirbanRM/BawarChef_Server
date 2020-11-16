@@ -1,5 +1,7 @@
 package com.bawarchef.Clients;
 
+import com.bawarchef.Broadcast.BroadcastEngine;
+import com.bawarchef.Broadcast.BroadcastItem;
 import com.bawarchef.Communication.EncryptedPayload;
 import com.bawarchef.Communication.Message;
 import com.bawarchef.Communication.ObjectByteCode;
@@ -131,21 +133,21 @@ public class UserClient{
             } else if (m.getMsg_type().equals("FETCH_CHEF")) {
 
                 DBConnect dbConnect = DBConnect.getInstance();
-                ResultSet rs = dbConnect.runFetchQuery("select chef_main_table.chefID,\n" +
+                ResultSet rs = dbConnect.runFetchQuery("select chef_main_table.chefID, rating,\n" +
                         "chef_main_table.f_name,\n" +
                         "chef_main_table.l_name,\n" +
                         "chef_profile_table.dp,\n" +
                         "chef_profile_table.lat,\n" +
                         "chef_profile_table.lng\n" +
                         "from chef_main_table \n" +
-                        "left join chef_profile_table using (chefID) \n" +
+                        "left join chef_profile_table using (chefID) left join chef_rating using (chefID) \n" +
                         "left join chef_circle using (chefID) where circleID = " + m.getProperty("CIRCLE") + ";");
 
                 ArrayList<ChefAdvertMinorContainer> chefs = new ArrayList<ChefAdvertMinorContainer>();
 
                 try {
                     while (rs.next()) {
-                        ChefAdvertMinorContainer chef = new ChefAdvertMinorContainer(rs.getString("chefID"), rs.getString("f_name"), rs.getString("l_name"), 4.5f);
+                        ChefAdvertMinorContainer chef = new ChefAdvertMinorContainer(rs.getString("chefID"), rs.getString("f_name"), rs.getString("l_name"), (float) rs.getDouble("rating"));
                         chef.setLocation(new ChefAdvertMinorContainer.LatLng(rs.getDouble("lat"), rs.getDouble("lng")));
                         chef.setDp(rs.getString("dp"));
                         chefs.add(chef);
@@ -166,17 +168,17 @@ public class UserClient{
 
                 DBConnect dbConnect = DBConnect.getInstance();
 
-                ResultSet rs = dbConnect.runFetchQuery("select chef_main_table.chefID,\n" +
+                ResultSet rs = dbConnect.runFetchQuery("select chef_main_table.chefID, rating,\n" +
                         "chef_main_table.f_name,\n" +
                         "chef_main_table.l_name,\n" +
                         "chef_profile_table.dp,\n" +
                         "chef_profile_table.bio\n" +
                         "from chef_main_table \n" +
-                        "left join chef_profile_table using (chefID) where chef_main_table.chefID = '" + chefID + "';");
+                        "left join chef_profile_table using (chefID) left join chef_rating using (chefID) where chef_main_table.chefID = '" + chefID + "';");
 
                 try {
                     rs.next();
-                    ChefAdvertMajorContainer c = new ChefAdvertMajorContainer(chefID, rs.getString("f_name"), rs.getString("l_name"), 4.5f, rs.getString("bio"));
+                    ChefAdvertMajorContainer c = new ChefAdvertMajorContainer(chefID, rs.getString("f_name"), rs.getString("l_name"), (float)rs.getDouble("rating"), rs.getString("bio"));
                     c.setDp(rs.getString("dp"));
 
                     Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT, "RESP_IND_CHEF");
@@ -260,7 +262,8 @@ public class UserClient{
             else if(m.getMsg_type().equals("ORDER_INFO")){
 
                 String orderID = (String) m.getProperty("ORDERID");
-                String query = "SELECT orderID, orders.chefID, orders.lat, orders.lng, f_name, l_name, dp, bookingDateTime, price, address, cart, status from orders left join chef_main_table on (orders.chefID = chef_main_table.chefID) left join chef_profile_table on (orders.chefID = chef_profile_table.chefID) where orders.orderID = '"+orderID+"';";
+                String query = "SELECT orders.orderID, orders.chefID, orders.lat, orders.lng, mobNo, f_name, l_name, dp, bookingDateTime, price, address, cart, status, rating from orders left join chef_main_table on (orders.chefID = chef_main_table.chefID) left join chef_profile_table on (orders.chefID = chef_profile_table.chefID) left join orders_extend on (orders.orderID = orders_extend.orderID) where orders.orderID = '"+orderID+"';";
+
                 OrderSummaryItem osi = DBToObject.rsToOrders(DBConnect.getInstance().runFetchQuery(query));
                 try {
                     Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT, "RESP_ORDERID_INFO");
@@ -301,6 +304,73 @@ public class UserClient{
                     Message newm = new Message(Message.Direction.SERVER_TO_CLIENT,"RESP_CHEF_LOC");
                     newm.putProperty("LAT",pair==null?0:te.getLocation(chefID).getLatitude());
                     newm.putProperty("LNG",pair==null?0:te.getLocation(chefID).getLongitude());
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(newm), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
+            }
+
+
+
+
+            else if(m.getMsg_type().equals("ORDER_RATING")){
+                String query = "UPDATE orders_extend set rating = '"+m.getProperty("RATING")+"' where orderID = '"+m.getProperty("ORDER")+"';";
+                boolean d = DBConnect.getInstance().runManipulationQuery(query);
+
+                try {
+                    Message newm = new Message(Message.Direction.SERVER_TO_CLIENT,"RESP_ORDER_RATING");
+                    newm.putProperty("RESULT",d?"SUCCESS":"FAILURE");
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(newm), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
+
+            }
+
+
+            else if(m.getMsg_type().equals("NEW_BCAST")){
+                BroadcastEngine broadcastEngine = BroadcastEngine.getInstance();
+                broadcastEngine.newBroadcast((String)m.getProperty("CIRCLE"),parentClient.getUserID(),(String)m.getProperty("MSG"));
+
+                try {
+                    Message newm = new Message(Message.Direction.SERVER_TO_CLIENT,"NEW_BCAST_REPLY");
+                    EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(newm), parentClient.getCrypto_key());
+                    parentClient.send(ep);
+                }catch (Exception e){}
+
+            }
+
+
+
+            else if(m.getMsg_type().equals("FETCH_BCAST")){
+                BroadcastEngine broadcastEngine = BroadcastEngine.getInstance();
+                ArrayList<BroadcastItem> items = broadcastEngine.getBroadcasts((String)m.getProperty("CIRCLE"),parentClient.getUserID());
+
+                ArrayList<BroadcastItemUser> itemUsers = new ArrayList<BroadcastItemUser>();
+
+
+                System.out.println(items.size());
+
+
+
+                for(BroadcastItem i : items){
+                    BroadcastItemUser biu = new BroadcastItemUser();
+                    biu.id = i.id;
+                    biu.message = i.message;
+                    biu.timestamp = i.timestamp;
+                    biu.userID = i.userID;
+                    biu.broadcast_replies = new ArrayList<BroadcastReply>();
+
+                    for(com.bawarchef.Broadcast.BroadcastReply r : i.broadcast_replies){
+                        BroadcastReply reply = new BroadcastReply(r.chefID,r.chefName,r.message);
+                        biu.broadcast_replies.add(reply);
+                    }
+
+                    itemUsers.add(biu);
+               }
+
+
+                try {
+                    Message newm = new Message(Message.Direction.SERVER_TO_CLIENT,"BCAST_RESP");
+                    newm.putProperty("DATA",itemUsers);
                     EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(newm), parentClient.getCrypto_key());
                     parentClient.send(ep);
                 }catch (Exception e){}

@@ -8,6 +8,7 @@ import com.bawarchef.Preferences;
 
 import java.io.*;
 import java.net.Socket;
+import java.net.SocketTimeoutException;
 import java.security.MessageDigest;
 
 public class Client {
@@ -48,6 +49,7 @@ public class Client {
     public Client(Socket sock){
         this.sock = sock;
         try {
+            this.sock.setSoTimeout(2000);
             this.oStream = new ObjectOutputStream(sock.getOutputStream());
             this.iStream = new ObjectInputStream(sock.getInputStream());
         }catch (Exception e){e.printStackTrace();}
@@ -88,11 +90,15 @@ public class Client {
                 Message o = p.getDecryptedPayload(crypto_key);
                 messageQueue.addToQueue(o);
             } catch (Exception e) {
-                System.out.println("CONNECTION CLOSED !"+e.toString());
+                if(e instanceof SocketTimeoutException)
+                    continue;
+                try{
+                    sock.close();
+                }catch (Exception e2){}
+                System.out.println("CONNECTION CLOSED !" + e.toString());
                 return;
             }
         }
-        System.out.println("CONNECTION CLOSED !");
     }
 
     public byte[] getCrypto_key() {
@@ -146,7 +152,6 @@ public class Client {
     public void send(EncryptedPayload encryptedPayload){
         try{
             oStream.writeUnshared(encryptedPayload);
-            oStream.reset();
         }catch (Exception e){e.printStackTrace();}
     }
 

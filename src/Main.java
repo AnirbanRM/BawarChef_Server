@@ -1,3 +1,4 @@
+import com.bawarchef.Broadcast.BroadcastEngine;
 import com.bawarchef.Communication.Listener;
 import com.bawarchef.DBConnect;
 import com.bawarchef.Preferences;
@@ -9,6 +10,8 @@ public class Main {
 
     public static void main(String[] args){
         System.out.println("STARTING...");
+        BroadcastEngine.getInstance();
+
         p = Preferences.getInstance();
         DBConnect.getInstance();
 
