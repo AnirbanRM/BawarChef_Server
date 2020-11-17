@@ -228,7 +228,7 @@ public class UserClient{
                     itemStr = Base64.getEncoder().encodeToString(itembyt);
                 }catch (Exception e){}
 
-                String query = "INSERT INTO Orders(chefID,userID,lat,lng,address,bookingDateTime,currentDateTime,cart,status) value('"+o.getChefID()+"','"+o.getUserID()+"','"+o.getLati()+"','"+o.getLongi()+"','"+o.getAddress()+"','"+o.getBookingDate()+" "+o.getBookingTime()+"','"+o.getCurrentDate()+" "+o.getCurrentTime()+"','"+itemStr+"','"+o.getStatus()+"');";
+                String query = "INSERT INTO orders(chefID,userID,lat,lng,address,bookingDateTime,currentDateTime,cart,status) value('"+o.getChefID()+"','"+o.getUserID()+"','"+o.getLati()+"','"+o.getLongi()+"','"+o.getAddress()+"','"+o.getBookingDate()+" "+o.getBookingTime()+"','"+o.getCurrentDate()+" "+o.getCurrentTime()+"','"+itemStr+"','"+o.getStatus()+"');";
                 ArrayList<String> key = dbConnect.runInsertQueryAndgetKey(query);
 
                 try {

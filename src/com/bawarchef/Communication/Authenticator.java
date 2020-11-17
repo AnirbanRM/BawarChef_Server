@@ -183,7 +183,7 @@ public class Authenticator {
             client.setClientType(Client.ClientType.CHEF);
 
             DBConnect dbConnect = DBConnect.getInstance();
-            ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_main_table where chefID = '"+m.getProperty("RegNo")+"';");
+            ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_main_table left join chef_profile_table using(chefID) where chefID = '"+m.getProperty("RegNo")+"';");
 
             ArrayList<ChefIdentity> al = DBToObject.ChefMTableToChefIdentity(rs);
             Message sendMsg = new Message(Message.Direction.SERVER_TO_CLIENT,"AUTH_ACK");

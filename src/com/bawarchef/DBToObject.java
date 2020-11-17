@@ -29,9 +29,12 @@ public class DBToObject {
                 ci.lname = rs.getString("l_name");
                 ci.dob = rs.getDate("dob").toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE);
                 ci.gender = rs.getString("gender").charAt(0);
+                ci.bio = rs.getString("bio");
+                ci.lati = rs.getDouble("lat");
+                ci.longi = rs.getDouble("lng");
 
                 String dpstr = rs.getString("dp");
-                if(dpstr.length()!=0){
+                if(dpstr!=null&&dpstr.length()!=0){
                     ci.dp = Base64.getDecoder().decode(dpstr);
                 }
 
@@ -54,7 +57,7 @@ public class DBToObject {
                 arrayList.add(ci);
 
             }
-        }catch (Exception e){ }
+        }catch (Exception e){ e.printStackTrace();}
         return arrayList;
     }
 
@@ -70,7 +73,7 @@ public class DBToObject {
                 ui.lname = rs.getString("l_name");
 
                 String dpstr = rs.getString("dp");
-                if(dpstr.length()!=0){
+                if(dpstr!=null&&dpstr.length()!=0){
                     ui.dp = Base64.getDecoder().decode(dpstr);
                 }
 

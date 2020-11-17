@@ -38,7 +38,7 @@ public class ChefClient{
                 long completed=0,pending=0, rank=0;
                 double rating=0, score=0;
 
-                String name="";
+                String name=null;
                 double scoreCOTM = 0;
                 byte[] dp = null;
 
@@ -104,7 +104,7 @@ public class ChefClient{
                 new_m.putProperty("RANK",rank);
                 new_m.putProperty("COTMName",name);
                 new_m.putProperty("COTMDP",dp);
-                new_m.putProperty("COTMScore",score);
+                new_m.putProperty("COTMScore",scoreCOTM);
 
                 try {
                     EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
@@ -170,17 +170,20 @@ public class ChefClient{
 
                 String chefID = parentClient.getUserID();
 
-                String regCircleID=null;
-                rs = dbConnect.runFetchQuery("SELECT circleID from chef_circle where chefID = '"+chefID+"';");
+                String regCircleID=null,regCircleName=null;
+                rs = dbConnect.runFetchQuery("SELECT chef_circle.circleID, circleName from chef_circle left join circles using(circleID) where chefID = '"+chefID+"';");
                 try {
-                    while(rs.next())
+                    while(rs.next()) {
                         regCircleID = rs.getString("circleID");
+                        regCircleName = rs.getString("circleName");
+                    }
                 }catch (Exception e){}
 
 
                 Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT,"GEOLOC_RESP");
                 new_m.putProperty("NEARBY_P",geoLocationCircles);
                 new_m.putProperty("REG_CIRCLE",regCircleID);
+                new_m.putProperty("REG_CIRCLE_NAME",regCircleName);
 
                 try {
                     EncryptedPayload ep = new EncryptedPayload(ObjectByteCode.getBytes(new_m), parentClient.getCrypto_key());
@@ -202,17 +205,9 @@ public class ChefClient{
                     base64DP = Base64.getEncoder().encodeToString(chefProfileContainer.dp);
                 DBConnect dbConnect = DBConnect.getInstance();
 
-                try{
-                    dbConnect.runManipulationQuery("UPDATE chef_login set loginID = '"+ chefProfileContainer.uName+"' where chefID = '"+parentClient.getUserID()+"';");
-                    ResultSet rs2 = dbConnect.runFetchQuery("select chefID from chef_profile_table where chefID = '"+parentClient.getUserID()+"';");
-                    while(rs2.next()) {
-                        success = dbConnect.runManipulationQuery("UPDATE chef_profile_table set bio='" + chefProfileContainer.bio + "',lat=" + chefProfileContainer.resiLat + ",lng=" + chefProfileContainer.resiLng + ",dp='" + base64DP + "' where chefID = '" + parentClient.getUserID() + "';");
-                    }
+                dbConnect.runManipulationQuery("UPDATE chef_login set loginID = '"+chefProfileContainer.uName+"' where chefID = '"+parentClient.getUserID()+"';");
 
-                    if(!success){
-                        success = dbConnect.runInsertQuery("INSERT INTO chef_profile_table value('"+ parentClient.getUserID() +"','"+base64DP+"',"+ chefProfileContainer.resiLat+","+ chefProfileContainer.resiLng+",'"+ chefProfileContainer.bio+"');");
-                    }
-                }catch (Exception e){}
+                success = dbConnect.runManipulationQuery("REPLACE INTO chef_profile_table values('"+parentClient.getUserID()+"','"+base64DP+"','"+chefProfileContainer.resiLat+"','"+chefProfileContainer.resiLng+"','"+chefProfileContainer.bio+"');");
 
                 if(success)new_m.putProperty("RESULT","SUCCESS");
                 else new_m.putProperty("RESULT","FAILURE");
@@ -583,15 +578,8 @@ public class ChefClient{
                 DBConnect con = DBConnect.getInstance();
                 String regNo = cl.regNo;
                 if(regNo!=null){
-                    ResultSet rs = con.runFetchQuery("SELECT * from chef_login where chefID = '"+regNo+"';");
-                    try {
-                        while (rs.next()) {
-                            String exec = "UPDATE chef_login set loginID = '" + cl.uName + "', password = '" + cl.pwd + "' where chefID = '" + cl.regNo + "';";
-                            return (con.runManipulationQuery(exec));
-                        }
-                        String exec = "INSERT into chef_login value('" + cl.regNo + "','" + cl.uName + "','" + cl.pwd + "');";
-                        return (con.runInsertQuery(exec));
-                    }catch (Exception e){e.printStackTrace(); return false;}
+                    String exec = "REPLACE INTO chef_login values ('"+cl.regNo+"','"+cl.uName+"','"+cl.pwd+"');";
+                    return con.runManipulationQuery(exec);
                 }
             }
             return false;
