@@ -163,7 +163,10 @@ public class UserClient{
                     parentClient.send(ep);
                 } catch (Exception e) {
                 }
-            } else if (m.getMsg_type().equals("FETCH_CHEF_IND")) {
+            }
+
+
+            else if (m.getMsg_type().equals("FETCH_CHEF_IND")) {
                 String chefID = (String) m.getProperty("chefID");
 
                 DBConnect dbConnect = DBConnect.getInstance();
@@ -187,20 +190,23 @@ public class UserClient{
                     parentClient.send(ep);
                 } catch (Exception e) {
                 }
-            } else if (m.getMsg_type().equals("FETCH_CHEF_MENU")) {
+            }
+
+
+            else if (m.getMsg_type().equals("FETCH_CHEF_MENU")) {
                 String chefID = (String) m.getProperty("chefID");
 
                 DBConnect dbConnect = DBConnect.getInstance();
                 ResultSet rs = dbConnect.runFetchQuery("select menuSerial from chef_menu where chefID = '" + chefID + "';");
 
-                Tree t = null;
+                ArrayList<Tree> t = null;
 
                 try {
                     rs.next();
                     byte[] bytarr = Base64.getDecoder().decode(rs.getString("menuSerial"));
                     ByteArrayInputStream bais = new ByteArrayInputStream(bytarr);
                     ObjectInputStream ois = new ObjectInputStream(bais);
-                    t = (Tree) ois.readObject();
+                    t = (ArrayList<Tree>) ois.readObject();
 
                     Message new_m = new Message(Message.Direction.SERVER_TO_CLIENT, "RESP_CHEF_MENU");
                     new_m.putProperty("CHEF_MENU", t);

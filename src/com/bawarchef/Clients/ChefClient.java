@@ -253,7 +253,7 @@ public class ChefClient{
             else if(m.getMsg_type().equals("UPD_CHEF_MENU")){
                 boolean success=false;
 
-                Tree menu = (Tree)m.getProperty("MENU_DATA");
+                ArrayList<Tree> menu = (ArrayList<Tree>)m.getProperty("MENU_DATA");
                 String objstr=null;
                 try {
                     ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -297,14 +297,14 @@ public class ChefClient{
 
                 ResultSet rs = dbConnect.runFetchQuery("SELECT * from chef_menu where chefID = '"+parentClient.getUserID()+"';");
 
-                Tree t =null;
+                ArrayList<Tree> t =null;
 
                 try {
                     while (rs.next()) {
                         byte[] bytarr = Base64.getDecoder().decode(rs.getString("menuSerial"));
                         ByteArrayInputStream bais = new ByteArrayInputStream(bytarr);
                         ObjectInputStream ois = new ObjectInputStream(bais);
-                        t = (Tree) ois.readObject();
+                        t = (ArrayList<Tree>) ois.readObject();
                     }
                 }catch (Exception e){e.printStackTrace();}
 
